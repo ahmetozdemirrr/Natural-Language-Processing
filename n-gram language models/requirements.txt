@@ -1,0 +1,4 @@
+inflect==7.4.0
+scikit_learn==1.5.2
+tqdm==4.66.5
+pandas
