@@ -10,7 +10,7 @@ CHARACTER_OUTPUT = ./data/processed/wiki_00_characters.txt
 
 
 # Default target: install and clean up dependencies
-all: install clean ngram perplexity textgen
+all: install clean ngram perplexity textgen table
 
 
 # Target to install dependencies
@@ -41,7 +41,18 @@ perplexity:
 # Target to generate random sentences
 textgen:
 	@echo "\033[31m<o> Generating random sentences...\033[0m"
-	$(PYTHON) main.py --textgen
+
+	@if [ -n "$(MAX_LENGTH)" ]; then \
+		$(PYTHON) main.py --textgen --max_length $(MAX_LENGTH); \
+	else \
+		$(PYTHON) main.py --textgen; \
+	fi
+
+
+# Target to generate result's table
+table:
+	@echo "\033[31m<o> Generating sentences and perplexity tables...\033[0m"
+	$(PYTHON) table_gen.py
 
 
 # Target to remove all processed data files
@@ -51,15 +62,18 @@ clear:
 	rm -rf ./results/*.txt
 	rm -rf perplexity_results.csv
 	rm -rf sample_sentences.csv
+	rm -rf tables.md
 
 
 # Help messages for available targets
 help:
 	@echo "\033[31m<o>  Available targets:\033[0m"
-	@echo "\033[31m<o>  make all        - Install dependencies and clean data.\033[0m"
-	@echo "\033[31m<o>  make install    - Install dependencies.\033[0m"
-	@echo "\033[31m<o>  make clean      - Clean and process data.\033[0m"
-	@echo "\033[31m<o>  make ngram      - Generate N-gram models.\033[0m"
-	@echo "\033[31m<o>  make perplexity - Calculate and display perplexity.\033[0m"
-	@echo "\033[31m<o>	make textgen	- Generate random sentences using n-gram models.\033[0m"
-	@echo "\033[31m<o>  make clear      - Remove all processed data.\033[0m"
+	@echo "\033[31m<o>  make all        			- Install dependencies and clean data.\033[0m"
+	@echo "\033[31m<o>  make install    			- Install dependencies.\033[0m"
+	@echo "\033[31m<o>  make clean      			- Clean and process data.\033[0m"
+	@echo "\033[31m<o>  make ngram      			- Generate N-gram models.\033[0m"
+	@echo "\033[31m<o>  make perplexity 			- Calculate and display perplexity.\033[0m"
+	@echo "\033[31m<o>  make textgen			    - Generate random sentences using n-gram models.\033[0m"
+	@echo "\033[31m<o>  make textgen MAX_LENGTH=100	- Generate random sentences using n-gram models (100 tokens).\033[0m"
+	@echo "\033[31m<o>  make clear      			- Remove all processed data.\033[0m"
+	@echo "\033[31m<o>  make table      			- Generating table for results.\033[0m"

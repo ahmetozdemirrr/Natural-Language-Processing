@@ -42,6 +42,7 @@ def main():
     parser.add_argument('--ngram', action='store_true', help="Run n-gram model generation.")
     parser.add_argument('--perplexity', action='store_true', help="Calculate and display perplexity")
     parser.add_argument('--textgen', action='store_true', help="Generate random sentences using n-gram models.")
+    parser.add_argument('--max_length', type=int, default=50, help="Maximum length for generated sentences (default: 50).")
 
     args = parser.parse_args()
 
@@ -136,25 +137,28 @@ def main():
         syllable_ngram_table = {n: load_ngram_table(f"./results/syllable_ngram_{n}-gram.txt") for n in range(1, 4)}
         character_ngram_table = {n: load_ngram_table(f"./results/character_ngram_{n}-gram.txt") for n in range(1, 4)}
 
+        max_length = args.max_length
+
         sentences_data = []
 
         print("\033[33m<-> Generating random sentences for syllable-based model...\033[0m")
         for n in range(1, 4):
-            sentence1 = generate_random_sentence(syllable_ngram_table[n], max_length=50)
-            sentence2 = generate_random_sentence(syllable_ngram_table[n], max_length=50)
+            sentence1 = generate_random_sentence(syllable_ngram_table[n], n, max_length=max_length)
+            sentence2 = generate_random_sentence(syllable_ngram_table[n], n, max_length=max_length)
             print(f"\033[33mSyllable-based {n}-gram sentence:\033[0m {sentence1}")
             sentences_data.append(("Syllable-Based", f"{n}-Gram", sentence1, sentence2))
 
         print("\033[33m<-> Generating random sentences for character-based model...\033[0m")
         for n in range(1, 4):
-            sentence1 = generate_random_sentence(character_ngram_table[n], max_length=50)
-            sentence2 = generate_random_sentence(character_ngram_table[n], max_length=50)
+            sentence1 = generate_random_sentence(character_ngram_table[n], n, max_length=max_length)
+            sentence2 = generate_random_sentence(character_ngram_table[n], n, max_length=max_length)
             print(f"\033[33mCharacter-based {n}-gram sentence:\033[0m {sentence1}")
             sentences_data.append(("Character-Based", f"{n}-Gram", sentence1, sentence2))
 
         # Save the sample sentences table to a .csv file
         save_sample_sentences_table(sentences_data, filename="sample_sentences.csv")
         print("\033[32m<-> Sample Sentences Table is saved at: sample_sentences.csv\033[0m")
+
 
 
 if __name__ == "__main__":

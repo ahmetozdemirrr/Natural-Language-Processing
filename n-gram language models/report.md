@@ -86,6 +86,8 @@ The `Makefile` is a key component for automating various steps in the workflow. 
 - **ngram**: Generates n-gram models and saves them in the `results` directory. It leverages the `--ngram` argument with `main.py`.
 - **perplexity**: Calculates perplexity for each model and each n-gram level, aiding in model evaluation.
 - **textgen**: Produces random sentences using trained n-gram models, executed by calling `main.py` with the `--textgen` argument.
+- **textgen MAX_LENGTH=100:** Generate random sentences using n-gram models for determined size.
+- **table:** Generating table for results. (sample sentences and perplexity results)
 - **clear**: Deletes all files from `data/processed` and `results`, resetting the data for fresh processing.
 
 The `Makefile` allows for efficient control over the entire workflow, providing users with quick access to various functions and enabling them to replicate results effortlessly.
@@ -415,10 +417,10 @@ The `--textgen` flag enables the system to generate random sentences by leveragi
    - This setup allows the function `generate_random_sentence()` to access the precomputed probabilities for each n-gram during sentence generation.
 
 2. **Generating Sentences**:
-   - For each n-gram model (1 to 3), `generate_random_sentence()` is called, generating sentences with a maximum length of 50 tokens. These sentences are printed for both syllable-based and character-based models.
-   - Each sentence generation leverages the n-gram probabilities to produce a sequence of tokens (syllables or characters), aiming to form coherent phrases.
+   - For each n-gram model (1 to 3), `generate_random_sentence()`  is called, generating sentences with a specified maximum length (default: 15 tokens). These sentences are printed for both syllable-based and character-based models.
+   - Each sentence generation leverages the n-gram probabilities to produce a sequence of tokens (syllables or characters), aiming to form coherent phrases while also limiting punctuation frequency and preventing excessive repetition of the same syllables.
    
-   
+
 
 
 ##### Detailed Function Descriptions
@@ -431,16 +433,19 @@ The primary function for generating random sentences works as follows:
   - `ngram_table`: The n-gram model dictionary, where each n-gram has a probability or frequency score.
   - `start_context`: The starting context, which is initially an empty tuple. If empty, the function selects a frequent starting n-gram from the model.
   - `max_length`: The maximum number of tokens in the generated sentence.
+  - `n`: The n value of the n-gram model.
 
 - **Logic**:
   - **Selecting Start Context**:
-    - If `start_context` is empty, the function defaults to a frequent initial n-gram (often a unigram or capitalized token) to start the sentence.
+    - If `start_context` is empty, the function defaults to a frequent initial n-gram without punctuation to start the sentence.
   - **Sentence Generation Loop**:
     - Using `current_context`, the function iterates over `max_length - len(start_context)`, appending one token per iteration based on the following:
-      - **Top N-grams Selection**: Retrieves top probable n-grams using `get_top_n_grams()` based on `current_context`.
+      - **Top N-grams Selection**: Retrieves the top 5 most probable n-grams using `get_top_n_grams()` based on `current_context`.
       - **Next Token Selection**:
-        - If top n-grams are available, the function randomly selects a next n-gram using their probabilities as weights.
-        - The chosen n-gram’s last token is appended to `sentence`, updating `current_context` with the latest tokens.
+        - If top n-grams are available, the function randomly selects a next n-gram from these, weighted by their probabilities.
+        - The chosen n-gram’s last token is appended to `sentence`, and `current_context` is updated to the latest tokens.
+      - **Punctuation Control:** Limits consecutive punctuation marks by enforcing a cooldown `(punctuation_limit)` before another punctuation mark can be added.
+      - **Repetition Prevention:** Avoids adding a syllable or word if it repeats more than twice consecutively in the sentence.
       - **Fallback**: If no suitable n-grams are found, the function selects a random n-gram from the model to continue sentence generation, which prevents the sentence from stalling.
   - **Output**:
     - After reaching `max_length`, the function returns `sentence` as a single string, combining tokens with spaces.
@@ -450,7 +455,7 @@ The primary function for generating random sentences works as follows:
 ##### Supporting Functions in `text_gen.py`
 
 - **`get_top_n_grams(ngram_table, current_context)`**:
-  - **Description**: Retrieves the most probable n-grams from the model given the current context. This function is crucial for generating realistic sentences, as it identifies likely continuations of the sentence.
+  - **Description**: Retrieves the top K most probable n-grams from the model given the current context. This function is crucial for generating realistic sentences, as it identifies likely continuations based on n-gram probabilities.
   - **Output**: Returns a list of probable n-grams, allowing `generate_random_sentence()` to construct the next part of the sentence with contextual relevance.
 
 
@@ -459,81 +464,9 @@ The primary function for generating random sentences works as follows:
 
 ### A sample console output for `make all` command:
 
-```bash
-ahmet@ahmet-Inspiron-14-5401:~/DERSLER/4_SINIF/fall/NLP/hw1$ make all
-<o> Installing dependencies...
-python3 -m pip install --upgrade pip
-Defaulting to user installation because normal site-packages is not writeable
-Requirement already satisfied: pip in /home/ahmet/.local/lib/python3.10/site-packages (24.2)
-Collecting pip
-  Downloading pip-24.3-py3-none-any.whl.metadata (3.7 kB)
-Downloading pip-24.3-py3-none-any.whl (1.8 MB)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 199.7 kB/s eta 0:00:00
-Installing collected packages: pip
-  Attempting uninstall: pip
-    Found existing installation: pip 24.2
-    Uninstalling pip-24.2:
-      Successfully uninstalled pip-24.2
-Successfully installed pip-24.3
-python3 -m pip install -r requirements.txt
-Defaulting to user installation because normal site-packages is not writeable
-Requirement already satisfied: inflect==7.4.0 in /home/ahmet/.local/lib/python3.10/site-packages (from -r requirements.txt (line 1)) (7.4.0)
-Requirement already satisfied: scikit_learn==1.5.2 in /home/ahmet/.local/lib/python3.10/site-packages (from -r requirements.txt (line 2)) (1.5.2)
-Requirement already satisfied: tqdm==4.66.5 in /home/ahmet/.local/lib/python3.10/site-packages (from -r requirements.txt (line 3)) (4.66.5)
-Requirement already satisfied: more-itertools>=8.5.0 in /usr/lib/python3/dist-packages (from inflect==7.4.0->-r requirements.txt (line 1)) (8.10.0)
-Requirement already satisfied: typeguard>=4.0.1 in /home/ahmet/.local/lib/python3.10/site-packages (from inflect==7.4.0->-r requirements.txt (line 1)) (4.3.0)
-Requirement already satisfied: numpy>=1.19.5 in /home/ahmet/.local/lib/python3.10/site-packages (from scikit_learn==1.5.2->-r requirements.txt (line 2)) (1.22.4)
-Requirement already satisfied: scipy>=1.6.0 in /usr/lib/python3/dist-packages (from scikit_learn==1.5.2->-r requirements.txt (line 2)) (1.8.0)
-Requirement already satisfied: joblib>=1.2.0 in /home/ahmet/.local/lib/python3.10/site-packages (from scikit_learn==1.5.2->-r requirements.txt (line 2)) (1.4.2)
-Requirement already satisfied: threadpoolctl>=3.1.0 in /home/ahmet/.local/lib/python3.10/site-packages (from scikit_learn==1.5.2->-r requirements.txt (line 2)) (3.5.0)
-Requirement already satisfied: typing-extensions>=4.10.0 in /home/ahmet/.local/lib/python3.10/site-packages (from typeguard>=4.0.1->inflect==7.4.0->-r requirements.txt (line 1)) (4.12.2)
-<o> Cleaning and processing data...
-python3 main.py --clean
-<-> 'modules' package installed.
-<-> Running data cleaning and preprocessing...
-Processing syllable  : 100%|████████████████████████████████████████████████████████████| 4547965/4547965 [04:57<00:00, 15299.92line/s]
-Processing character : 100%|████████████████████████████████████████████████████████████| 4547965/4547965 [02:30<00:00, 30206.49line/s]
-<-> Data extraction process begins
-<-> File saved at: ./data/processed/wiki_00_syllables_train.txt
-<-> File saved at: ./data/processed/wiki_00_syllables_test.txt
-<-> File saved at: ./data/processed/wiki_00_characters_train.txt
-<-> File saved at: ./data/processed/wiki_00_characters_test.txt
-<-> Data cleaning and preprocessing completed.
-<o> Generating N-gram models...
-python3 main.py --ngram
-<-> 'modules' package installed.
-<-> Running n-gram model generation...
-Building 1-Gram: 100%|██████████████████████████████████████████████████████████████████| 4320566/4320566 [00:45<00:00, 94063.56line/s]
-Building 2-Gram: 100%|██████████████████████████████████████████████████████████████████| 4320566/4320566 [01:05<00:00, 66201.25line/s]
-Building 3-Gram: 100%|██████████████████████████████████████████████████████████████████| 4320566/4320566 [01:32<00:00, 46636.89line/s]
-Building 1-Gram: 100%|█████████████████████████████████████████████████████████████████| 8641133/8641133 [01:14<00:00, 115347.31line/s]
-Building 2-Gram: 100%|█████████████████████████████████████████████████████████████████| 8641133/8641133 [01:21<00:00, 105491.91line/s]
-Building 3-Gram: 100%|██████████████████████████████████████████████████████████████████| 8641133/8641133 [01:30<00:00, 95661.55line/s]
-<-> N-gram model generation completed.
-<o> Calculating perplexity...
-python3 main.py --perplexity
-<-> 'modules' package installed.
-<-> Calculating perplexity for syllable-based model...
-Syllable-based 1-gram perplexity: 401.96632274279864
-Syllable-based 2-gram perplexity: 23452.647431934874
-Syllable-based 3-gram perplexity: 443225.6714804
-<-> Calculating perplexity for character-based model...
-Character-based 1-gram perplexity: 23.11906113223346
-Character-based 2-gram perplexity: 342.1483708751984
-Character-based 3-gram perplexity: 3591.1622287487403
-<o> Generating random sentences...
-python3 main.py --textgen
-<-> 'modules' package installed.
-<-> Generating random sentences for syllable-based model...
-Syllable-based 1-gram sentence: . wank jüt ğizz pvp dgi vuz rcv bocy jokk kjk trabz yelt kös flug Xju narr mrut bcm fraw vcp Qcd dağs ybus çdh tzu krc sıW sting rkb hjın dçn jnin thesp şvi şer tlip vejl trips bçl söyl cj hpn tsz buQ lmem kröp drü prl hşimy
-Syllable-based 2-gram sentence: Wil li kas t o luş tu ru lu nan , ka ra sı na da ha zi ne km . bu nun da ha re tim o la rı na li a dı . bu ra sın da , ka ra fın dan ya da ya ' nın e
-Syllable-based 3-gram sentence: Win dow s dar ta şen to yat dı ler ' la ğın dir nik ri crip ler ken yiz nir sın hod re rı o cham nal ji de tan ğı pir ) be be f re ca ley and bu mis ul ilk , ret ri le ği
-<-> Generating random sentences for character-based model...
-Character-based 1-gram sentence: a z o c : d . p c W o ) n r n j ' w e a : d ç n ö ; W r t z g Q u : ş s o ; b h f u t b X a u ? w z
-Character-based 2-gram sentence: W i ö r i s ı l a k a n a n d a r a k t i s e n d a k t e n d ı n d i r i n d a k a r e l a l i r i
-Character-based 3-gram sentence: W i l m q j W k c ş e ü a r ı X ' ö i i d ! b v n g : W d g s / j n x p ü e ' ç d ö r b ı ) k p o Q
-ahmet@ahmet-Inspiron-14-5401:~/DERSLER/4_SINIF/fall/NLP/hw1$ 
-```
+![photo](/home/ahmet/Pictures/Screenshots/Screenshot from 2024-10-29 14-51-42.png)
+
+![photo_](/home/ahmet/Pictures/Screenshots/Screenshot from 2024-10-29 14-53-15.png)
 
 
 
@@ -541,4 +474,119 @@ ahmet@ahmet-Inspiron-14-5401:~/DERSLER/4_SINIF/fall/NLP/hw1$
 
 ## Results and Tables
 
-tabloları falan ekle csv dosyalarından 
+
+
+**Sample Sentences**
+
+|    | Model           | N-Gram   | Sentence 1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Sentence 2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|---:|:----------------|:---------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|  0 | Syllable-Based  | 1-Gram   | da la le la le . da le da . da la la le . da la da da , da da le da . le le da la . le la da . le la la . la la da le , da da le le . la da da . le la le da da le da . la le da la la , le la da , da la la da . le la                                                                                                                                                                                                                                                                                                                                                                                                                           | le la da la da . da le da la la . le la la . da da la le , la da le la la da la . le le la la . da da la . la le da . le la le da da . la le le . da da le le , la le le . le la da le . da le la le , da la le da , da da le la . le                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|  1 | Syllable-Based  | 2-Gram   | le re ti ği ve ya da i le rin ço cuk ba şa yan lar dan son ra sı nın da ki ye ti mi si ne ti ril di ği ni ver me ye ni ve a lan ma sı na li bir şe kil de , a ra fın dan o la nı sı ra fın da i ki li ne de ya şa rı nı i se zo nu cu dur . yı lın da i le me ye ni den ge le rin de bu ra da ya şa ğı ve ya pı lan mış tır . bu ra sın dan son ra sı na gö re ti ği ve bu lun ma sı na da ha va , a lan dı . bu lu ğu nu sun da , a ra sın dan bi lir . yı i ki şi o yun da , ka ra sın da ya yın lan dı . bu lu şan bir a ra fın dan son ra fın dan bi lir . o lup bu lu nur lar , bu lu var dır . bu a ra sı na ka ra fın dan son yıl dız o la | le ri ni a ra fın dan bi ri ni den bi le ri ne si ni ver me si te le ri ni den o luş tur . a ra fın da ki e lekt ron lar da i ki a ra fın dan o la rı na ka na ka dar t o la ma sı nı i le me si ne bağ lı bir le ri ne bağ lı ğı na da ki ye ti . bu a dı . bu lu ğu o la rak ta dır . bu lu nan ilk o yun da , bu nun da ha son o la rak da i le di . o lan bir lik le ri nin ya pı la rı na ka ra fın dan bi le ri ka ra sın da ki e dil me ri ne de ki ye ni a lan bir çok sa yı lı ğa be le ri nin a i çin de ki şi sel o lan ma dı . bu lu var dır . bu lu şan mak ta ri nin e ği ne km u zak laş ma sı na da ha re ce ği tim o la              |
+|  2 | Syllable-Based  | 3-Gram   | o la rak a nı la ma sı nın ar dın dan i ti ba rı i le ev li ve ü ze rin de yer al mak ta o lup , i ki li se si ve ka ra sal ik lim et ki li se si , bir le şik dev let le ri , sa de ce ği gi bi i sim li bir ye re ya pı sı na kar şı laş ma sı , i kin ci e dad ku lüp le rin ya şa mış , bu ra ya pı lan bir nü fus sa yı mı nı i çe ri sin de ki ya nın e n i yi bir per de si ni is ter se de di ko nu su dur . pro fe sör lü ğü nün i kin ci e şi nin ya nı sı ra la ma sı na ka ra i ki ço cuk la rın da bu lu nan ve ka dın lar , i se a çık a nah tar ke li me sa jı gön de ren , ka ra sal ik lim et ki a ra sın da , ya pım lar la     | o la rak a ta kım la rı nın ve ya a tıl dı ğı bir dö nem de ki ba kan lı ğı , e ği li mi , ka ra de niz den yük sel ti le rin de i se e ği tim den ya yım lan dı . da ha a z sa yı mı na ka ra de re ce ye ka rar ver mek te dir . ya rı sın da ki ka da şı nın ya nın e n çok sa yı mı na gö re nek ve ye mek le ri ne ya kın dan il gi len me si a ra sın da ki ka sa sı na rağ men , bu i ki si de o la rak gö rü şü nü len bir stad yum da ya lı dır . kö yün ik li mi et ki le ri ni ge nel lik le ri ni ge nel lik le rin de , il köğ re tim yı lın da , a na do lu ve ya pı sı nı sağ la yan yol as fal t o lup , ka li for ma giy di . an cak |
+|  3 | Character-Based | 1-Gram   | r e n i a i e r n r i i a e n i r n a i n n e e r n i e a e n a e r n e a e n i n e a e a a r a i a r n r a a i i e e a a n e a r a a r n i a e n i n e n a n a i e n e i a n r e i a r n r e a i i e e                                                                                                                                                                                                                                                                                                                                                                                                                                           | r n a e e n a a e e r r n i r n a n a r e n i i r r e e r e r r a r i n e i a i a r n r a i e n a n i e e i r a a e e i n i n a a e n n a r r a i e i e i e r a a n r a r e n r e a a i i e e n a r r                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|  4 | Character-Based | 2-Gram   | a r ı l a l ı n e r a n e k l e s i n d a n ı r a k e r e r i r a r e r a k e r i l e k i n d ı r ı n d i n d e n i l e s i l e n d a k a r a r i r i r a r a r a k t ı l i n ı n ı n i n a r . a l m a y l a k e k a k l a k a r . s i k i n ı l e r a n e n ı k i n e r i r a n e s a r i r . a n ı r a l a k l e r . b a n d a l a n d i l a l e n d a y o l ı n a n ı l a r i l e r i r i l e n e l a n e                                                                                                                                                                                                                                     | a l i l e n i n d a n i r a r a n i k a y o y o n i k e n i r i n d e k t e n i l a r . b i r e s t a k i n ı ş t a k e k a k l e k e r ı r ı k e n a r ı l ı n ı n a r e s e s i r a n d e l a k l a n d u l m ı k i l i n ı n e k t a l a r ı r e k t e l i r e k i n e r a l a l ı n ı k l a y e r ı n d ı k l m e r i s e k a k l m e n a r . k a y e r i n i n a k a r ı n e n e r i s t i l m i k a k i n                                                                                                                                                                                                                                       |
+|  5 | Character-Based | 3-Gram   | l a n d a n l e r a k ı r . k u l a r d e v i y a r i s t e d i r i l m a s o n r a s t i k l e n d i l k e z i s e l d ı . d ü z d e k t a r ı n d a y r u n a n a k a d i l e r d i r . b i r l a r a s a y a n a k t a r ı y ı l ı ğ ı n d a n a n d a n l i n i k l e n d a b e k t u r d i . a y a y a r a n s a l ı k t e m d e v e b e l i n e k i ş l a n d e r i n d a h a y ı l ı k a n l ı n ı n a n                                                                                                                                                                                                                                   | l a r a k a r a k i s i n i k i n i n e k l a r ı c a k i n g ü n e l i k t i l m e r i h a s ı n d a n ı l ı k e n i n d a b i r . a m a s ı n d a n ı l a r ı n a d ı r . b u r a l a r ı n d e k a r i n i k t i r d i l e r i n g e r e t i r . a l i k i n i s t a r a n l e n b e y i n a n d a n d e k t e r l a r a k ı m ı ş t u r . y ı l m ı ş t u r i k o y n a l e r a n a l i k i l m i s t i r l                                                                                                                                                                                                                                       |
+
+--------------------------------------------------
+
+
+
+
+
+**Perplexity Results**
+
+|      | Model           | N-Gram | Perplexity |
+| ---: | :-------------- | :----- | ---------: |
+|    0 | Syllable-Based  | 1-Gram |     375.80 |
+|    1 | Syllable-Based  | 2-Gram |   19540.44 |
+|    2 | Syllable-Based  | 3-Gram |  357015.48 |
+|    3 | Character-Based | 1-Gram |      21.72 |
+|    4 | Character-Based | 2-Gram |     299.47 |
+|    5 | Character-Based | 3-Gram |    2890.79 |
+
+--------------------------------------------------
+
+
+
+
+
+## Analysis and Conclusion
+
+
+
+
+### Model Performance Analysis Based on Perplexity Values
+
+The performance analysis of syllable-based and character-based N-gram models is essential to understanding their suitability for modeling the Turkish language. Perplexity values serve as a core indicator here, where lower values imply higher certainty and predictive accuracy.
+
+| Model               | 1-Gram Perplexity | 2-Gram Perplexity | 3-Gram Perplexity |
+|---------------------|-------------------|-------------------|-------------------|
+| **Syllable-Based**  | 375.81           | 19540.44         | 357015.48        |
+| **Character-Based** | 21.73            | 299.48           | 2890.79          |
+
+
+
+1. **Character-Based Model**:
+   
+   - This model maintains lower perplexity across all n-gram levels due to the limited set of Turkish characters (28 letters and a few punctuation marks).
+   - With fewer unique elements to predict, the model can confidently choose from a constrained set, reducing uncertainty. Thus, even as n increases, the growth in perplexity is moderate and manageable.
+   - The character-based model is suitable when accuracy and predictability are priorities, as it can handle shorter contexts without significant losses in certainty.
+   
+2. **Syllable-Based Model**:
+   
+   - The syllable-based model, while advantageous for capturing morphological details, exhibits significantly higher perplexity values.
+   - Turkish is morphologically rich, with many possible syllables. The model’s high perplexity values are expected given the extensive variety and complexity of syllables, especially in multi-syllabic words.
+   - Although the syllable model holds potential for generating more semantically rich text, it struggles to predict accurately without a sufficient context, leading to higher perplexity.
+   
+3. **Trade-Offs**:
+   
+   - The trade-off between character and syllable models revolves around **prediction certainty** and **linguistic richness**. Character models offer simpler, more predictable outputs, while syllable models bring depth but at a cost of increased perplexity.
+   - For Turkish, which relies heavily on morphology, syllable-based models could yield richer, more meaningful phrases, but their practical utility depends on the required accuracy and context length.
+   
+   
+
+#### Quality of Generated Sentences
+
+When examining the sentence quality across different models and n-gram sizes, several patterns emerge:
+
+1. **1-Gram Syllable-Based Model**:
+   - The instructions specify selecting one of the top five probable n-grams at each step, which significantly impacts sentence quality in the 1-gram syllable-based model.
+   - In this setup, the five highest-frequency syllables—`la`, `le`, `da`, `.` and `,`—often appear in repetitive patterns. This limited selection contributes to the repetitive, unnatural sentences generated by the 1-gram syllable model, as these syllables form simple, repetitive sequences with minimal semantic coherence.
+
+2. **Higher N-Gram Levels (2-Gram and 3-Gram)**:
+   - As n increases to 2 and 3, the syllable-based model’s quality notably improves. The context provided by multi-syllable patterns reduces the repetition seen in the 1-gram output.
+   - Similarly, character-based models benefit from increased n-gram levels, producing sequences that appear more coherent and linguistically plausible. However, as expected, the syllable-based model still yields more semantically relevant sentences due to the use of entire syllables, which align more closely with Turkish word formation.
+
+3. **Comparing Character-Based and Syllable-Based Outputs**:
+   - The character-based model, while yielding coherent character sequences, lacks the richness seen in syllable-based outputs, especially at higher n-grams. The character model is suitable for tasks where simpler, predictable text generation is needed, while the syllable-based model is preferable when the output requires deeper morphological representation.
+
+
+
+#### Conclusion
+
+Based on the results:
+- **Character-Based Model** is advantageous for applications requiring **lower perplexity** and **higher prediction certainty**, especially at 1-gram and 2-gram levels.
+- **Syllable-Based Model** becomes more beneficial at **higher n-grams**, as it captures the morphological structure of Turkish more effectively, though it requires longer contexts to manage perplexity.
+
+
+
+Overall, the **syllable-based 3-gram model** emerges as the most suitable for modeling Turkish text where a more realistic language representation is required. It balances coherence with linguistic depth, though it may not be as efficient for simpler applications where the character-based model would suffice. This project illustrates that the choice between syllable and character n-grams hinges on the specific requirements of the task—character models for predictability and syllable models for rich language representation.
+
+
+## Table on LLM Usage
+
+
+The following table indicates the parts of this submission that were generated or assisted by ChatGPT, alongside the sections that were originally written by me.
+
+| Section                                     | Description of LLM Assistance                          | Original/Assisted |
+|---------------------------------------------|-------------------------------------------------------|--------------------|
+| **Makefile Flags with `argparse`**          | Guidance on `argparse` usage tailored for Makefile flags and customizations | Assisted          |
+| **`split_data()` function**                 | Assistance in choosing libraries and functions, along with parameter explanations for file splitting | Assisted          |
+| **N-gram Smoothing Calculations**           | Detailed assistance in designing the smoothing algorithms used in N-gram probability adjustments | Assisted          |
+| **Perplexity Calculations**                 | Help with algorithmic structures and code generation for perplexity calculations | Assisted          |
+| **`tqdm` Library Customization**            | Explanation of customization options for `tqdm` used to tailor output displays | Assisted          |
+| **Regex (`re`) Usage**                      | Guidance on regex patterns and usage within functions | Assisted          |
+| **General Code and Function Development**   | Primary development and coding, with ChatGPT consulted for debugging and solutions for specific issues | Mostly Original   |
+| **Report Writing and Markdown Formatting**  | Minor assistance in structuring certain sections and tailoring specific explanations within the report | Assisted          |
+
+This table reflects a breakdown of where large language model assistance was utilized in developing specific parts of the project. Although much of the core development was done independently, ChatGPT provided support for technical issues, library guidance, and specialized coding advice, particularly for parts requiring advanced implementations.

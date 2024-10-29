@@ -57,6 +57,15 @@ def remove_non_turkish_characters(content):
     return ''.join(filter(allowed_chars.match, content))
 
 
+def remove_non_turkish_words(content):
+    # Sadece Türkçe karakterlerden oluşan kelimeleri filtrele
+    allowed_word_pattern = re.compile(r'^[abcçdefgğhıijklmnoöprsştuüvyzABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ.,!?]+$')
+    words = content.split()
+    # Türkçe dışı karakter barındıran kelimeleri ayıkla
+    filtered_words = [word for word in words if allowed_word_pattern.match(word)]
+    return ' '.join(filtered_words)
+
+
 # Türkçe karakterleri düz Latin harflerine çevir
 def replace_turkish_characters(content):
     for char, replacement in turkish_char_map.items():
@@ -177,7 +186,8 @@ def process_text(content, model_type="syllable"):
     content = remove_links(content)
     content = remove_special_spaces(content)
     content = clean_html_tags(content)
-    content = remove_non_turkish_characters(content)
+    # content = remove_non_turkish_characters(content)
+    content = remove_non_turkish_words(content)
     content = expand_abbreviations(content)
     content = convert_num_to_word(content)
     # content = replace_turkish_characters(content)
